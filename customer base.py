@@ -21,7 +21,6 @@ def create_table(conn):
                     customer_id INTEGER NOT NULL REFERENCES customer(id) ON DELETE CASCADE,
                     phone VARCHAR(20));""")
         
-
         conn.commit()
       
 
@@ -29,7 +28,6 @@ def add_customer(conn, customer_data):
     with conn.cursor() as cur:
         cur.executemany("""INSERT INTO customer(name, surname, email)
                     VALUES (%s, %s, %s);""", customer_data)
-        conn.commit()
 
         cur.execute("""SELECT * FROM customer;""")
         print(cur.fetchall())          
@@ -40,15 +38,16 @@ def add_phone(conn, phone_customer):
         cur.executemany("""INSERT INTO phone(customer_id, phone)
                         VALUES(%s, %s);""",(phone_customer))
             
-        conn.commit()
         cur.execute("""SELECT * FROM phone;""")
         print(cur.fetchall())
         
 
 def update(conn, id, name=None, surname=None, email=None):   
      with conn.cursor() as cur:
-        cur.execute("""
-                     UPDATE customer SET name =%s, surname =%s, email =%s WHERE id =%s;""",(id, name, surname, email))
+        arg_list = {'name': name, "surname": surname, 'email': email}
+        for key, arg in arg_list.items():
+            if arg:
+                cur.execute("UPDATE customer SET {}=%s WHERE id=%s;".format(key), (arg, id))
         
         cur.execute(""" SELECT * FROM customer;""")
         print(cur.fetchall())
@@ -58,6 +57,7 @@ def delete_phone(conn, customer_id, phone):
      with conn.cursor() as cur:
         cur.execute("""
                     DELETE FROM phone WHERE customer_id = %s AND phone = %s;""",(customer_id, phone))
+        
         cur.execute("""SELECT * FROM phone;""")
         print(cur.fetchall())
 
@@ -75,7 +75,7 @@ def select_customer(conn, name=None, surname=None, email=None, phone=None):
      with conn.cursor() as cur:
         cur.execute("""
                     SELECT name, surname, email, phone FROM customer
-                    JOIN phone on phone.customer_id = customer.id
+                    LEFT JOIN phone on phone.customer_id = customer.id
                     WHERE name = %s OR surname = %s OR email =%s OR phone =%s;""",(name, surname, email, phone))
         print(cur.fetchall()) 
 
@@ -83,15 +83,15 @@ def select_customer(conn, name=None, surname=None, email=None, phone=None):
       
 customer_data =[('Иван', 'Иванов', 'ivanivanov@mail.ru'),('Петр','Петров', 'petrpetrov@mail.ru'),('Василий', 'Васильев', 'vasiliyvasilev@mail.ru')]
 phone_customer = [(1, '89998887766'),(1, '89887776655'),(2, '89876665544')] 
-with psycopg2.connect(database = "postgres", user = "postgres", password = "5524admjgptw") as conn:
+with psycopg2.connect(database = "postgres", user = "postgres", password = "postgres") as conn:
 
     create_table(conn)
     add_customer(conn, customer_data)
     add_phone(conn, phone_customer)
-    update(conn, "Jon", "Conor", "jc@mail.ru", 2)
+    update(conn, name="Jon", id=2)
     delete_phone(conn, 1, '89998887766')
     delete_customer(conn, 2)
-    select_customer(conn, 'Иван')
+    select_customer(conn, surname='Васильев')
 
 
 conn.close()    
